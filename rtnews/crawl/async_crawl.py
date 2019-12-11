@@ -140,7 +140,11 @@ async def run_task():
     logging.info(f'Created {len(save_tasks)} tasks, task=_save')
 
     logging.info('Gathering crawl tasks...')
-    await asyncio.gather(*crawl_tasks, return_exceptions=True)
+    res = await asyncio.gather(*crawl_tasks, return_exceptions=True)
+    logging.debug(f'crawl tasks return: {res}')
+    for i, v in enumerate(res):
+        if v != 1:
+            logging.error(f'index: {i}, crawl task failed: {v}')
 
     logging.info('Joining queue...')
     await queue.join()
@@ -398,7 +402,7 @@ def _day_or_night(timestamp):
 
 if __name__ == '__main__':
     try:
-        fh = logging.FileHandler(ct.LOG_FILE, mode='w', encoding='utf-8', delay=False)
+        fh = logging.FileHandler(ct.CRAWL_LOG_FILE, mode='w', encoding='utf-8', delay=False)
     except:
         fh = logging.StreamHandler(sys.stdout)
     logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)

@@ -127,7 +127,11 @@ async def feeds():
     logging.info(f'Created {len(tasks)} tasks, task=feeds_html')
 
     logging.info('Gathering feeding tasks...')
-    await asyncio.gather(*tasks, return_exceptions=True)
+    res = await asyncio.gather(*tasks, return_exceptions=True)
+    logging.debug(f'tasks return: {res}')
+    for i in res:
+        if i != 1:
+            logging.error(f'task failed: {i}')
 
     logging.info('Closing redis...')
     redis.close()
@@ -135,7 +139,7 @@ async def feeds():
 
 if __name__ == '__main__':
     try:
-        fh = logging.FileHandler(ct.LOG_FILE, mode='w', encoding='utf-8', delay=False)
+        fh = logging.FileHandler(ct.FEED_LOG_FILE, mode='w', encoding='utf-8', delay=False)
     except:
         fh = logging.StreamHandler(sys.stdout)
     logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)

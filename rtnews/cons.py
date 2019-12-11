@@ -54,7 +54,8 @@ WORK_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 DAT_DIR = os.path.join(WORK_DIR, 'dat')
 #print(DAT_DIR)
 # 注释LOG_FILE即可打印到终端
-LOG_FILE = os.path.join(DAT_DIR, 'real-time-news.log')
+CRAWL_LOG_FILE = os.path.join(DAT_DIR, 'crawl.log')
+FEED_LOG_FILE = os.path.join(DAT_DIR, 'feed.log')
 #print(LOG_FILE)
 if not os.path.exists(DAT_DIR):
     os.mkdir(DAT_DIR)
