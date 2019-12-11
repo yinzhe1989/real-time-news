@@ -130,8 +130,8 @@ async def feeds():
     res = await asyncio.gather(*tasks, return_exceptions=True)
     logging.debug(f'tasks return: {res}')
     for i in res:
-        if i != 1:
-            logging.error(f'task failed: {i}')
+        if i != None:
+            logging.error(f'task failed: {str(i)}')
 
     logging.info('Closing redis...')
     redis.close()

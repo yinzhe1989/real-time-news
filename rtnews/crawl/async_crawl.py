@@ -144,7 +144,7 @@ async def run_task():
     logging.debug(f'crawl tasks return: {res}')
     for i, v in enumerate(res):
         if v != 1:
-            logging.error(f'index: {i}, crawl task failed: {v}')
+            logging.error(f'index: {i}, crawl task failed: {str(v)}')
 
     logging.info('Joining queue...')
     await queue.join()
@@ -197,7 +197,11 @@ async def _maintain(redis, ts_expire):
         await redis.hmset_dict(ct.KEY_CHANNELS, ct.GLOBAL_CHANNELS) # 这里不在任务里
     tasks = [asyncio.create_task(_maintain_lid_zset(redis, ts_expire, lid)) for lid in ct.GLOBAL_CHANNELS]
     logging.debug(f'Created {len(tasks)} tasks, task=_maintain_lid_zset')
-    await asyncio.gather(*tasks, return_exceptions=True)
+    res = await asyncio.gather(*tasks, return_exceptions=True)
+    logging.debug(f'_maintain_lid_zset tasks return: {res}')
+    for i, v in enumerate(res):
+        if v != 1:
+            logging.error(f'index: {i}, _maintain_lid_zset task failed: {str(v)}')
 
 async def _maintain_lid_zset(redis, ts_expire, lid):
     """
