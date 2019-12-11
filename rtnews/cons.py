@@ -42,13 +42,13 @@ KEY_NEWS = 'news-{oid}'
 NEWS_EXPIRE_SECS = 3*24*60*60
 
 # 采集周期 30分钟
-#CRAWL_CYCLE_SECS = 30 * 60
-CRAWL_CYCLE_SECS = 3*24*60*60
+CRAWL_CYCLE_SECS = 30 * 60
+#CRAWL_CYCLE_SECS = 3*24*60*60
 
 # dir and log file
 import os
 import logging
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 WORK_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 #print(WORK_DIR)
 DAT_DIR = os.path.join(WORK_DIR, 'dat')

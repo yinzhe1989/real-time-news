@@ -127,7 +127,7 @@ async def feeds():
     logging.info(f'Created {len(tasks)} tasks, task=feeds_html')
 
     logging.info('Gathering feeding tasks...')
-    await asyncio.gather(*tasks, return_exceptions=False)
+    await asyncio.gather(*tasks, return_exceptions=True)
 
     logging.info('Closing redis...')
     redis.close()

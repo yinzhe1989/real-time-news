@@ -140,7 +140,7 @@ async def run_task():
     logging.info(f'Created {len(save_tasks)} tasks, task=_save')
 
     logging.info('Gathering crawl tasks...')
-    await asyncio.gather(*crawl_tasks, return_exceptions=False)
+    await asyncio.gather(*crawl_tasks, return_exceptions=True)
 
     logging.info('Joining queue...')
     await queue.join()
@@ -149,7 +149,7 @@ async def run_task():
     [save_task.cancel() for save_task in save_tasks]
 
     #logging.info('Gathering save tasks...')
-    #await asyncio.gather(*save_tasks, return_exceptions=False)
+    #await asyncio.gather(*save_tasks, return_exceptions=True)
 
     logging.info('Closing redis...')
     redis.close()
@@ -193,7 +193,7 @@ async def _maintain(redis, ts_expire):
         await redis.hmset_dict(ct.KEY_CHANNELS, ct.GLOBAL_CHANNELS) # 这里不在任务里
     tasks = [asyncio.create_task(_maintain_lid_zset(redis, ts_expire, lid)) for lid in ct.GLOBAL_CHANNELS]
     logging.debug(f'Created {len(tasks)} tasks, task=_maintain_lid_zset')
-    await asyncio.gather(*tasks, return_exceptions=False)
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 async def _maintain_lid_zset(redis, ts_expire, lid):
     """
