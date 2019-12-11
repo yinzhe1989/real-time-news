@@ -131,7 +131,7 @@ async def feeds():
     logging.debug(f'tasks return: {res}')
     for i in res:
         if i != None:
-            logging.error(f'task failed: {str(i)}')
+            logging.error(f'task failed: {repr(i)}')
 
     logging.info('Closing redis...')
     redis.close()

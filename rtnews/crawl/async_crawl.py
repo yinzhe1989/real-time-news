@@ -357,7 +357,7 @@ def _parse_news_item_body(text):
     body = ''
     for node in res:
         p_class = node.xpath('@class')
-        if p_class and p_class[0] in ['article-editor', 'show_author']:
+        if p_class and p_class[0] in ['article-editor', 'show_author', 'ori_titlesource']:
             continue
         p_text = node.xpath("string()")
         if not p_text:
