@@ -200,7 +200,7 @@ async def _maintain(redis, ts_expire):
     res = await asyncio.gather(*tasks, return_exceptions=True)
     logging.debug(f'_maintain_lid_zset tasks return: {res}')
     for i, v in enumerate(res):
-        if v != 1:
+        if v != None:
             logging.error(f'index: {i}, _maintain_lid_zset task failed: {str(v)}')
 
 async def _maintain_lid_zset(redis, ts_expire, lid):
@@ -406,7 +406,7 @@ def _day_or_night(timestamp):
 
 if __name__ == '__main__':
     try:
-        fh = logging.FileHandler(ct.CRAWL_LOG_FILE, mode='w', encoding='utf-8', delay=False)
+        fh = logging.FileHandler(ct.CRAWL_LOG_FILE, mode='a', encoding='utf-8', delay=False)
     except:
         fh = logging.StreamHandler(sys.stdout)
     logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
