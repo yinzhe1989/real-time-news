@@ -326,7 +326,7 @@ async def _parse_news_items(queue, session, global_lid, timeline, json_response)
             async with session.get(obj_item.url) as response:
                 text = await response.text(encoding=response.charset if response.charset else 'utf-8')
                 obj_item.body, obj_item.summary = _parse_news_item_body(text)
-            if not obj_item.body or not obj_item.summary:
+            if not obj_item.body.strip() or not obj_item.summary.strip():
                 logging.warning(f'News item body/summary empty, skip it. url: {obj_item.url}')
                 continue
             # append to async queue
@@ -364,6 +364,10 @@ def _parse_news_item_body(text):
             continue
         p_text.replace('&nbsp;', ' ')
         if p_text.startswith('\u3000\u3000新浪声明'):
+            continue
+        if p_text.startswith('原标题：'):
+            continue
+        if p_text.startswith('\u3000\u3000原标题：'):
             continue
         #if p_text.startswith('\u3000\u3000新浪财经讯 '):
         #    p_text = '\u3000\u3000' + p_text[len('\u3000\u3000新浪财经讯 '):]
