@@ -363,12 +363,13 @@ def _parse_news_item_body(text):
         if not p_text:
             continue
         p_text.replace('&nbsp;', ' ')
-        if p_text.startswith('\u3000\u3000新浪声明'):
+        p_text_lstriped = p_text.lstrip() 
+        if p_text_lstriped.startswith('新浪声明'):
             continue
-        if p_text.startswith('原标题：'):
+        if p_text_lstriped.startswith('原标题：'):
             continue
-        if p_text.startswith('\u3000\u3000原标题：'):
-            continue
+        #if p_text.startswith('\u3000\u3000原标题：'):
+        #    continue
         #if p_text.startswith('\u3000\u3000新浪财经讯 '):
         #    p_text = '\u3000\u3000' + p_text[len('\u3000\u3000新浪财经讯 '):]
         p_text = re.sub('^\u3000\u3000新浪.{0,6}讯 ', '\u3000\u3000', p_text)
