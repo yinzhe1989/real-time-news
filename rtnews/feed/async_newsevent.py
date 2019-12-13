@@ -83,7 +83,7 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
     return df
 
 async def feeds_txt(redis, lid):
-    df = await get_latest_news(redis, lid)
+    df = await get_latest_news(redis, lid, ct.FEED_NEWS_MAX_NUM)
     txt_file = os.path.join(ct.DAT_DIR, f'{ct.GLOBAL_CHANNELS[lid]}.txt')
     logging.info(f'Writing text to file: {txt_file}')
     news_count = 0
@@ -99,7 +99,7 @@ async def feeds_txt(redis, lid):
 
 
 async def feeds_html(redis, lid):
-    df = await get_latest_news(redis, lid)
+    df = await get_latest_news(redis, lid, ct.FEED_NEWS_MAX_NUM)
     html = E.HTML(
         E.HEAD(
             E.META(content='text/html', charset='utf-8'),

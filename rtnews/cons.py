@@ -27,10 +27,10 @@ GLOBAL_CHANNELS = {'100': '全部', '101': '国内', '102': '国际',
                    '109': '股市', '110': '美股'}
 
 # 新闻摘要最大句子数
-MAX_SUMMARY_SENTENCES_NUM = 5
+MAX_SUMMARY_SENTENCES_NUM = 4
 
 # 新闻摘要句子最大字数
-MAX_SUMMARY_SENTENCE_WORDS_NUM = 60
+MAX_SUMMARY_SENTENCE_WORDS_NUM = 50
 
 # Redis 相关配置
 REDIS_URI = 'redis://127.0.0.1:6379'
@@ -44,6 +44,9 @@ NEWS_EXPIRE_SECS = 3*24*60*60
 # 采集周期 30分钟
 CRAWL_CYCLE_SECS = 30 * 60
 #CRAWL_CYCLE_SECS = 3*24*60*60
+
+# 生成订阅文章的新闻数量
+FEED_NEWS_MAX_NUM = 100
 
 # dir and log file
 import os
