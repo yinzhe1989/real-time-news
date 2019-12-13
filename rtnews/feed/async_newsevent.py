@@ -93,7 +93,7 @@ async def feeds_html(redis, lid):
     html = E.HTML(
         E.HEAD(
             E.META(content='text/html', charset='utf-8'),
-            E.LINK(rel='stylesheet', href='style.css', type='text/css'),
+            E.LINK(rel='stylesheet', href='../css/style.css', type='text/css'),
             E.TITLE(E.CLASS('title'), f'{ct.GLOBAL_CHANNELS[lid]}实时新闻摘要')
         )
     )
