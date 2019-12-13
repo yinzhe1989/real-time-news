@@ -9,6 +9,7 @@ import time
 import os
 import sys
 import logging
+import traceback
 
 from rtnews import cons as ct
 from rtnews.feed import feed_vars as fv
@@ -62,11 +63,15 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
         logging.debug(f'Redis hgetall, key={news_key}')
         news = await redis.hgetall(news_key)
         logging.debug(f'raw news from redis: {news}')
-        rt = datetime.fromtimestamp(int(news['timestamp']))
-        rtstr = datetime.strftime(rt, "%m-%d %H:%M")
-        row = [lname, news['title'], news['summary'], rtstr, news['url']]
-        if show_Body:
-            row.append(news['body'])
+        try:
+            rt = datetime.fromtimestamp(int(news['timestamp']))
+            rtstr = datetime.strftime(rt, "%m-%d %H:%M")
+            row = [lname, news['title'], news['summary'], rtstr, news['url']]
+            if show_Body:
+                row.append(news['body'])
+        except Exception as e:
+            logging.error(f'process raw news failed, exception: {repr(e)}')
+            traceback.print_exc()
         data.append(row)
         logging.debug(f'news processed as a list: {row}')
     df = pd.DataFrame(data, columns=fv.LATEST_COLS_C if show_Body else fv.LATEST_COLS)
