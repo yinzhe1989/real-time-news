@@ -62,6 +62,11 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
     for news_key in news_keys:
         logging.debug(f'Redis hgetall, key={news_key}')
         news = await redis.hgetall(news_key)
+        # 每次抓取网页时候才会清理频道zset中的过期新闻key，
+        # 而过期的新闻是由redis自动根据生存时间实时删除的，
+        # 因此存在频道zset中的新闻key已经过期的情况
+        if not news:
+            continue
         logging.debug(f'raw news from redis: {news}')
         try:
             rt = datetime.fromtimestamp(int(news['timestamp']))
