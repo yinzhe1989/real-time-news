@@ -39,7 +39,7 @@ KEY_LID = 'lid-{lid}'
 KEY_NEWS = 'news-{oid}'
 
 # 新闻过期时长
-NEWS_EXPIRE_SECS = 3*24*60*60
+NEWS_EXPIRE_SECS = 2*24*60*60
 
 # 采集周期 30分钟
 CRAWL_CYCLE_SECS = 30 * 60
