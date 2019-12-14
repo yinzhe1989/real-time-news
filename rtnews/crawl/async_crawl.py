@@ -2,7 +2,6 @@ from rtnews.crawl import crawl_vars as cv
 from rtnews import cons as ct
 import asyncio
 import aioredis
-import logging
 from datetime import datetime
 import aiohttp
 import lxml.html
@@ -12,6 +11,7 @@ from textrank4zh import TextRank4Sentence
 import sys
 import re
 
+logger = ct.get_logger('crawl', ct.LOG_LEVEL, ct.CRAWL_LOG_FILE)
 
 class SinaRollNewsItem(object):
     """
@@ -117,45 +117,45 @@ async def run_task():
     每个新闻频道对应一个采集任务，同时创建相同个数的redis持久化任务，
     采集到的新闻条目放入异步队列，redis持久化任务读取队列并持久化到redis中。
     """
-    logging.info(f'Global channels: {ct.GLOBAL_CHANNELS}')
-    logging.info('Creating queue...')
+    logger.info(f'Global channels: {ct.GLOBAL_CHANNELS}')
+    logger.info('Creating queue...')
     queue = asyncio.Queue()
 
-    logging.info('Creating redis pool...')
+    logger.info('Creating redis pool...')
     redis = await aioredis.create_redis_pool(ct.REDIS_URI, encoding='utf-8')
 
     ts_now = int(datetime.now().timestamp())
     ts_crawl = ts_now - ct.CRAWL_CYCLE_SECS
     ts_expire = ts_now - ct.NEWS_EXPIRE_SECS # 时间戳比该值小的新闻均过期
 
-    logging.info('Maintaining redis...')
+    logger.info('Maintaining redis...')
     await _maintain(redis, ts_expire)
 
-    logging.info('Creating crawl tasks...')
+    logger.info('Creating crawl tasks...')
     crawl_tasks = [asyncio.create_task(_crawl(queue, lid, ts_crawl)) for lid in ct.GLOBAL_CHANNELS]
-    logging.info(f'Created {len(crawl_tasks)} tasks, task=_crawl')
+    logger.info(f'Created {len(crawl_tasks)} tasks, task=_crawl')
 
-    logging.info('Creating save tasks...')
+    logger.info('Creating save tasks...')
     save_tasks = [asyncio.create_task(_save(queue, redis)) for _ in range(len(crawl_tasks))]
-    logging.info(f'Created {len(save_tasks)} tasks, task=_save')
+    logger.info(f'Created {len(save_tasks)} tasks, task=_save')
 
-    logging.info('Gathering crawl tasks...')
+    logger.info('Gathering crawl tasks...')
     res = await asyncio.gather(*crawl_tasks, return_exceptions=True)
-    logging.debug(f'crawl tasks return: {res}')
+    logger.debug(f'crawl tasks return: {res}')
     for i, v in enumerate(res):
         if v != 1:
-            logging.error(f'index: {i}, crawl task failed: {str(v)}')
+            logger.error(f'index: {i}, crawl task failed: {str(v)}')
 
-    logging.info('Joining queue...')
+    logger.info('Joining queue...')
     await queue.join()
 
-    logging.info('Cancelling save tasks...')
+    logger.info('Cancelling save tasks...')
     [save_task.cancel() for save_task in save_tasks]
 
-    #logging.info('Gathering save tasks...')
+    #logger.info('Gathering save tasks...')
     #await asyncio.gather(*save_tasks, return_exceptions=True)
 
-    logging.info('Closing redis...')
+    logger.info('Closing redis...')
     redis.close()
     await redis.wait_closed()
 
@@ -174,7 +174,7 @@ async def _save(queue, redis):
             raise ValueError('News item oid empty')
 
         key = ct.KEY_NEWS.format(oid=news_item.oid)
-        logging.info(f'Save news: key={key}')
+        logger.info(f'Save news: key={key}')
         if not await redis.exists(key):
             await redis.hmset_dict(key, news_item.to_dict())
             await redis.expireat(key, int(news_item.timestamp) + ct.NEWS_EXPIRE_SECS)
@@ -193,15 +193,15 @@ async def _maintain(redis, ts_expire):
         ts_expire: int, 时间戳，时间戳比该值小的新闻均过期
     """
     if not await redis.exists(ct.KEY_CHANNELS):
-        logging.debug(f'Redis: hmset_dict, key={ct.KEY_CHANNELS}, value={ct.GLOBAL_CHANNELS}')
+        logger.debug(f'Redis: hmset_dict, key={ct.KEY_CHANNELS}, value={ct.GLOBAL_CHANNELS}')
         await redis.hmset_dict(ct.KEY_CHANNELS, ct.GLOBAL_CHANNELS) # 这里不在任务里
     tasks = [asyncio.create_task(_maintain_lid_zset(redis, ts_expire, lid)) for lid in ct.GLOBAL_CHANNELS]
-    logging.debug(f'Created {len(tasks)} tasks, task=_maintain_lid_zset')
+    logger.debug(f'Created {len(tasks)} tasks, task=_maintain_lid_zset')
     res = await asyncio.gather(*tasks, return_exceptions=True)
-    logging.debug(f'_maintain_lid_zset tasks return: {res}')
+    logger.debug(f'_maintain_lid_zset tasks return: {res}')
     for i, v in enumerate(res):
         if v != None:
-            logging.error(f'index: {i}, _maintain_lid_zset task failed: {str(v)}')
+            logger.error(f'index: {i}, _maintain_lid_zset task failed: {str(v)}')
 
 async def _maintain_lid_zset(redis, ts_expire, lid):
     """
@@ -214,7 +214,7 @@ async def _maintain_lid_zset(redis, ts_expire, lid):
         lid: 新闻频道的id
     """
     key = ct.KEY_LID.format(lid=lid)
-    logging.debug(f'Redis: zremrangebyscore, key={key}, min={float("-inf")}, max={ts_expire}')
+    logger.debug(f'Redis: zremrangebyscore, key={key}, min={float("-inf")}, max={ts_expire}')
     await redis.zremrangebyscore(key, min=float('-inf'), max=ts_expire)
 
 async def _crawl(queue, global_lid, timeline):
@@ -234,7 +234,7 @@ async def _crawl(queue, global_lid, timeline):
         raise KeyError(global_lid)
     if global_lid not in cv.SINA_CHANNELS:
         raise KeyError(global_lid)
-    logging.info(f'Crawl: channel={ct.GLOBAL_CHANNELS[global_lid]}({global_lid}), '
+    logger.info(f'Crawl: channel={ct.GLOBAL_CHANNELS[global_lid]}({global_lid}), '
                  f'timeline={datetime.fromtimestamp(timeline)}({timeline})')
     pageid = cv.SINA_CHANNELS[global_lid].get('pageid', '153')
     slid = cv.SINA_CHANNELS[global_lid]['slid']
@@ -251,7 +251,7 @@ async def _crawl(queue, global_lid, timeline):
         if next_page:
             page = page + 1
         else:
-            logging.info(f'Task crawl end. global_lid={global_lid}')
+            logger.info(f'Task crawl end. global_lid={global_lid}')
             break
 
 
@@ -271,16 +271,16 @@ async def _crawl_page(queue, global_lid, url, timeline):
     --------
 
     """
-    logging.info(f'Crawl page: {url}')
+    logger.info(f'Crawl page: {url}')
     header = {'referer': cv.REF_URL.format(p_type=ct.P_TYPE['https'], domain=ct.DOMAINS['sn']),
               'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.97 Safari/537.36'}
     async with aiohttp.ClientSession(headers=header, connector=aiohttp.TCPConnector(ssl=False)) as session:
         async with session.get(url) as response:
             try:
                 json_response = await response.json(encoding=response.charset if response.charset else 'utf-8')
-                #logging.debug(f'News json response: {json_response}')
+                #logger.debug(f'News json response: {json_response}')
             except aiohttp.ContentTypeError:
-                logging.warning(
+                logger.warning(
                     f'Skip this response. Reason: content-type not match, expect: "application/json", get: "{response.content_type}"')
             return await _parse_news_items(queue, session, global_lid, timeline, json_response)
 
@@ -303,13 +303,13 @@ async def _parse_news_items(queue, session, global_lid, timeline, json_response)
     next_page = True
     try:
         for json_item in json_response['result']['data']:
-            logging.debug(f'News item json: {json_item}')
+            logger.debug(f'News item json: {json_item}')
             if int(json_item['ctime']) < timeline:
-                logging.warning(f'Json news item ctime: {json_item["ctime"]}, skip it.')
+                logger.warning(f'Json news item ctime: {json_item["ctime"]}, skip it.')
                 next_page = False
                 continue
             if not json_item['oid']:
-                logging.warning(f'Json news item oid empty, skip it.')
+                logger.warning(f'Json news item oid empty, skip it.')
                 continue
             obj_item = SinaRollNewsItem(json_item['oid'])
             obj_item.url = json_item['url']
@@ -327,13 +327,13 @@ async def _parse_news_items(queue, session, global_lid, timeline, json_response)
                 text = await response.text(encoding=response.charset if response.charset else 'utf-8')
                 obj_item.body, obj_item.summary = _parse_news_item_body(text)
             if not obj_item.body.strip() or not obj_item.summary.strip():
-                logging.warning(f'News item body/summary empty, skip it. url: {obj_item.url}')
+                logger.warning(f'News item body/summary empty, skip it. url: {obj_item.url}')
                 continue
             # append to async queue
-            logging.info(f'Put news item to queue: {obj_item}')
+            logger.info(f'Put news item to queue: {obj_item}')
             await queue.put(obj_item)
     except KeyError as e:
-        logging.error(f'news item parse error, exception: key {e} not found')
+        logger.error(f'news item parse error, exception: key {e} not found')
         next_page = False
     return next_page
 
@@ -376,7 +376,7 @@ def _parse_news_item_body(text):
         
         body = body + p_text + '\n'
     summary = ''
-    logging.debug(f'news body: {body}')
+    logger.debug(f'news body: {body}')
     if body:
         tr4s = TextRank4Sentence()
         tr4s.analyze(text=body, lower=True, source = 'all_filters')
@@ -387,7 +387,7 @@ def _parse_news_item_body(text):
         summary_arr = sorted(summary_arr, key=lambda x: x[0])
         summary_arr = map(lambda x: x[1] + '。', summary_arr)
         summary = ''.join(summary_arr)
-        logging.debug(f'news summary: {summary}')
+        logger.debug(f'news summary: {summary}')
 
     return body, summary
 
@@ -410,11 +410,11 @@ def _day_or_night(timestamp):
     return 'day' if h >= 6 and h < 22 else 'night'
 
 if __name__ == '__main__':
-    try:
-        #fh = logging.FileHandler(ct.CRAWL_LOG_FILE, mode='a', encoding='utf-8', delay=False)
-        fh = logging.handlers.RotatingFileHandler(ct.CRAWL_LOG_FILE, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
-    except:
-        fh = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
-    #logging.basicConfig(format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
+    #try:
+        #fh = logger.FileHandler(ct.CRAWL_LOG_FILE, mode='a', encoding='utf-8', delay=False)
+    #    fh = logger.handlers.RotatingFileHandler(ct.CRAWL_LOG_FILE, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
+    #except:
+    #    fh = logger.StreamHandler(sys.stdout)
+    #logger.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
+    #logger.basicConfig(format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
     asyncio.run(run_task())

@@ -8,11 +8,12 @@ import asyncio
 import time
 import os
 import sys
-import logging
 import traceback
 
 from rtnews import cons as ct
 from rtnews.feed import feed_vars as fv
+
+logger = ct.get_logger('feed', ct.LOG_LEVEL, ct.FEED_LOG_FILE)
 
 async def get_latest_news(redis, channel, top=None, show_Body=False):
     """
@@ -49,25 +50,25 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
             lid = reversed_dic[channel]
     assert lname and lid
 
-    logging.info(f'Getting latest news, channel name: {lname}, channel id: {lid}')
+    logger.info(f'Getting latest news, channel name: {lname}, channel id: {lid}')
    
     lid_key = ct.KEY_LID.format(lid=lid)
     end = -1 if top is None else top
-    logging.debug(f'Redis zrevrange, key={lid_key}, start=0, end={end}')
+    logger.debug(f'Redis zrevrange, key={lid_key}, start=0, end={end}')
     news_keys = await redis.zrevrange(lid_key, 0, end)
-    logging.debug(f'news_keys={news_keys}')
-    logging.info(f'Found {len(news_keys)} news in channel {lname}. Processing...')
+    logger.debug(f'news_keys={news_keys}')
+    logger.info(f'Found {len(news_keys)} news in channel {lname}. Processing...')
 
     data = []
     for news_key in news_keys:
-        logging.debug(f'Redis hgetall, key={news_key}')
+        logger.debug(f'Redis hgetall, key={news_key}')
         news = await redis.hgetall(news_key)
         # 每次抓取网页时候才会清理频道zset中的过期新闻key，
         # 而过期的新闻是由redis自动根据生存时间实时删除的，
         # 因此存在频道zset中的新闻key已经过期的情况
         if not news:
             continue
-        logging.debug(f'raw news from redis: {news}')
+        logger.debug(f'raw news from redis: {news}')
         try:
             rt = datetime.fromtimestamp(int(news['timestamp']))
             rtstr = datetime.strftime(rt, "%m-%d %H:%M")
@@ -75,17 +76,17 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
             if show_Body:
                 row.append(news['body'])
         except Exception as e:
-            logging.error(f'process raw news failed, exception: {repr(e)}')
+            logger.error(f'process raw news failed, exception: {repr(e)}')
             traceback.print_exc()
         data.append(row)
-        logging.debug(f'news processed as a list: {row}')
+        logger.debug(f'news processed as a list: {row}')
     df = pd.DataFrame(data, columns=fv.LATEST_COLS_C if show_Body else fv.LATEST_COLS)
     return df
 
 async def feeds_txt(redis, lid):
     df = await get_latest_news(redis, lid, ct.FEED_NEWS_MAX_NUM)
     txt_file = os.path.join(ct.DAT_DIR, f'{ct.GLOBAL_CHANNELS[lid]}.txt')
-    logging.info(f'Writing text to file: {txt_file}')
+    logger.info(f'Writing text to file: {txt_file}')
     news_count = 0
     with open(txt_file, 'w', encoding='utf-8') as f:
         for row in df.iterrows():
@@ -94,8 +95,8 @@ async def feeds_txt(redis, lid):
             f.write(news)
             f.write('---\n\n')
             news_count = news_count +1
-            logging.debug(f'Append one news to file, news: {news}')
-    logging.info(f'news count: {news_count} ')
+            logger.debug(f'Append one news to file, news: {news}')
+    logger.info(f'news count: {news_count} ')
 
 
 async def feeds_html(redis, lid):
@@ -108,7 +109,7 @@ async def feeds_html(redis, lid):
         )
     )
     body = etree.SubElement(html, 'body')
-    logging.debug(f'html: {lxml.html.tostring(html, pretty_print=True, encoding="utf-8").decode("utf-8")}')
+    logger.debug(f'html: {lxml.html.tostring(html, pretty_print=True, encoding="utf-8").decode("utf-8")}')
 
     news_count = 0
     for row in df.iterrows():
@@ -121,38 +122,38 @@ async def feeds_html(redis, lid):
         p1.text = row['time']
         p2 = etree.SubElement(div, 'p', attrib={'class': 'summary'})
         p2.text = row['summary']
-        logging.debug(f'Append one news to html body, news: {etree.tostring(div, pretty_print=True, encoding="utf-8").decode("utf-8")}')
+        logger.debug(f'Append one news to html body, news: {etree.tostring(div, pretty_print=True, encoding="utf-8").decode("utf-8")}')
         news_count = news_count + 1
 
     html_file = os.path.join(ct.DAT_DIR, f'{ct.GLOBAL_CHANNELS[lid]}.html')
-    logging.info(f'Writing html to file: {html_file}, news count: {news_count}')
+    logger.info(f'Writing html to file: {html_file}, news count: {news_count}')
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(lxml.html.tostring(html, pretty_print=True, encoding='utf-8').decode('utf-8'))
 
 async def feeds():
-    logging.info('Creating redis pool...')
+    logger.info('Creating redis pool...')
     redis = await aioredis.create_redis_pool(ct.REDIS_URI, encoding='utf-8')
-    logging.info(f'Creating tasks...')
+    logger.info(f'Creating tasks...')
     tasks = [asyncio.create_task(feeds_html(redis, lid)) for lid in ct.GLOBAL_CHANNELS]
-    logging.info(f'Created {len(tasks)} tasks, task=feeds_html')
+    logger.info(f'Created {len(tasks)} tasks, task=feeds_html')
 
-    logging.info('Gathering feeding tasks...')
+    logger.info('Gathering feeding tasks...')
     res = await asyncio.gather(*tasks, return_exceptions=True)
-    logging.debug(f'tasks return: {res}')
+    logger.debug(f'tasks return: {res}')
     for i in res:
         if i != None:
-            logging.error(f'task failed: {repr(i)}')
+            logger.error(f'task failed: {repr(i)}')
 
-    logging.info('Closing redis...')
+    logger.info('Closing redis...')
     redis.close()
     await redis.wait_closed()
 
 if __name__ == '__main__':
-    try:
-        fh = logging.handlers.RotatingFileHandler(ct.FEED_LOG_FILE, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
-    except:
-        fh = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
+    #try:
+    #    fh = logging.handlers.RotatingFileHandler(ct.FEED_LOG_FILE, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
+    #except:
+    #    fh = logging.StreamHandler(sys.stdout)
+    #logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
     #logging.basicConfig(format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
     #start_time = time.perf_counter()
     asyncio.run(feeds())

@@ -49,6 +49,7 @@ CRAWL_CYCLE_SECS = 30 * 60
 FEED_NEWS_MAX_NUM = 100
 
 # dir and log file
+import sys
 import os
 import logging
 LOG_LEVEL = logging.INFO
@@ -62,3 +63,20 @@ FEED_LOG_FILE = os.path.join(DAT_DIR, 'feed.log')
 #print(LOG_FILE)
 if not os.path.exists(DAT_DIR):
     os.mkdir(DAT_DIR)
+
+def get_logger(log_name, log_level, log_file=None):
+    logger = logging.getLogger(log_name)
+    logger.setLevel(log_level)
+    if log_file:
+        fh = logging.handlers.RotatingFileHandler(log_file, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
+    else:
+        fh = logging.StreamHandler(sys.stdout)
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    format_str = '%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s'
+    formatter = logging.Formatter(format_str, datefmt)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    
+    return logger
+
+    
