@@ -149,7 +149,7 @@ async def feeds():
 
 if __name__ == '__main__':
     try:
-        fh = logging.FileHandler(ct.FEED_LOG_FILE, mode='a', encoding='utf-8', delay=False)
+        fh = logging.handlers.RotatingFileHandler(ct.FEED_LOG_FILE, mode='a', maxBytes=1024*1024*10, backupCount=2, encoding='utf-8', delay=False)
     except:
         fh = logging.StreamHandler(sys.stdout)
     logging.basicConfig(handlers=[fh], format='%(asctime)s %(filename)s %(lineno)d %(levelname)s:%(message)s', level=ct.LOG_LEVEL)
