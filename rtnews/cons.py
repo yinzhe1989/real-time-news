@@ -52,6 +52,7 @@ FEED_NEWS_MAX_NUM = 100
 import sys
 import os
 import logging
+import logging.handlers
 LOG_LEVEL = logging.INFO
 WORK_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 #print(WORK_DIR)
