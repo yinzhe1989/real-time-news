@@ -143,7 +143,7 @@ async def run_task():
     res = await asyncio.gather(*crawl_tasks, return_exceptions=True)
     logger.debug(f'crawl tasks return: {res}')
     for i, v in enumerate(res):
-        if v != 1:
+        if v != None:
             logger.error(f'index: {i}, crawl task failed: {str(v)}')
 
     logger.info('Joining queue...')
@@ -285,6 +285,18 @@ async def _crawl_page(queue, global_lid, url, timeline):
             return await _parse_news_items(queue, session, global_lid, timeline, json_response)
 
 
+def _title_pass(title):
+    for item in cv.TITLE_PASS_LIST:
+        if item in title:
+            return True
+    return False
+
+def _repalce_sensitive(content):
+    for k, v in cv.SENSITIVE_WORD_MAP:
+        if k in content:
+            return content.replace(k, v)
+    return content
+
 async def _parse_news_items(queue, session, global_lid, timeline, json_response):
     """
     解析json中的新闻条目列表
@@ -311,6 +323,8 @@ async def _parse_news_items(queue, session, global_lid, timeline, json_response)
             if not json_item['oid']:
                 logger.warning(f'Json news item oid empty, skip it.')
                 continue
+            if _title_pass(json_item['title']):
+                continue
             obj_item = SinaRollNewsItem(json_item['oid'])
             obj_item.url = json_item['url']
             obj_item.title = json_item['title']
@@ -329,6 +343,7 @@ async def _parse_news_items(queue, session, global_lid, timeline, json_response)
             if not obj_item.body.strip() or not obj_item.summary.strip():
                 logger.warning(f'News item body/summary empty, skip it. url: {obj_item.url}')
                 continue
+            obj_item.summary = _repalce_sensitive(obj_item.summary)
             # append to async queue
             logger.info(f'Put news item to queue: {obj_item}')
             await queue.put(obj_item)
@@ -367,6 +382,8 @@ def _parse_news_item_body(text):
         if p_text_lstriped.startswith('新浪声明'):
             continue
         if p_text_lstriped.startswith('原标题：'):
+            continue
+        if p_text_lstriped.startswith('来源：'):
             continue
         #if p_text.startswith('\u3000\u3000原标题：'):
         #    continue
