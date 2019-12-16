@@ -96,7 +96,7 @@ class SinaRollNewsItem(object):
 
     @property
     def summary(self):
-        return self._title
+        return self._summary
 
     @summary.setter
     def summary(self, value):
@@ -292,7 +292,7 @@ def _title_pass(title):
     return False
 
 def _repalce_sensitive(content):
-    for k, v in cv.SENSITIVE_WORD_MAP:
+    for k, v in cv.SENSITIVE_WORD_MAP.items():
         if k in content:
             return content.replace(k, v)
     return content
