@@ -45,9 +45,6 @@ NEWS_EXPIRE_SECS = 2*24*60*60
 CRAWL_CYCLE_SECS = 30 * 60
 #CRAWL_CYCLE_SECS = 3*24*60*60
 
-# 生成订阅文章的新闻数量
-FEED_NEWS_MAX_NUM = 100
-
 # dir and log file
 import sys
 import os

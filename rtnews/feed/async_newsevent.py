@@ -15,15 +15,16 @@ from rtnews.feed import feed_vars as fv
 
 logger = ct.get_logger('feed', ct.LOG_LEVEL, ct.FEED_LOG_FILE)
 
-async def get_latest_news(redis, channel, top=None, show_Body=False):
+async def get_latest_news(redis, channel, top=None, timeline=None, show_Body=False):
     """
-    获取即时新闻
+    获取前top条时间大于timeline的即时新闻
 
     Parameters
     -------
         redis: aioredis.RedisPool
         channel: str, 待获取的新闻所在频道(id或名称)
         top: int, 最多获取多少条新闻，默认None全获取
+        timeline: int, 时间戳，获取大于该时间戳的新闻，默认None全获取
         show_body: bool, 是否返回新闻正文，默认False不返回
 
     Result
@@ -71,6 +72,9 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
         logger.debug(f'raw news from redis: {news}')
         try:
             rt = datetime.fromtimestamp(int(news['timestamp']))
+            if rt < timeline:
+                logger.debug(f'news_time={rt}, timeline={timeline}, skip this news')
+                continue
             rtstr = datetime.strftime(rt, "%m-%d %H:%M")
             row = [lname, news['title'], news['summary'], rtstr, news['url']]
             if show_Body:
@@ -84,7 +88,8 @@ async def get_latest_news(redis, channel, top=None, show_Body=False):
     return df
 
 async def feeds_txt(redis, lid):
-    df = await get_latest_news(redis, lid, ct.FEED_NEWS_MAX_NUM)
+    timeline = datetime.now().timestamp() - fv.FEED_NEWS_TIMELINE
+    df = await get_latest_news(redis, lid, top=fv.FEED_NEWS_TOP, timeline=timeline)
     txt_file = os.path.join(ct.DAT_DIR, f'{ct.GLOBAL_CHANNELS[lid]}.txt')
     logger.info(f'Writing text to file: {txt_file}')
     news_count = 0
@@ -100,7 +105,8 @@ async def feeds_txt(redis, lid):
 
 
 async def feeds_html(redis, lid):
-    df = await get_latest_news(redis, lid, ct.FEED_NEWS_MAX_NUM)
+    timeline = datetime.now().timestamp() - fv.FEED_NEWS_TIMELINE
+    df = await get_latest_news(redis, lid, top=fv.FEED_NEWS_TOP, timeline=timeline)
     html = E.HTML(
         E.HEAD(
             E.META(content='text/html', charset='utf-8'),

@@ -389,7 +389,7 @@ def _parse_news_item_body(text):
         #    continue
         #if p_text.startswith('\u3000\u3000新浪财经讯 '):
         #    p_text = '\u3000\u3000' + p_text[len('\u3000\u3000新浪财经讯 '):]
-        p_text = re.sub('^\u3000\u3000新浪.{0,6}讯 ', '\u3000\u3000', p_text)
+        p_text = re.sub('^\u3000\u3000新浪.{0,6}讯[ ,.。，]?', '\u3000\u3000', p_text)
         
         body = body + p_text + '\n'
     summary = ''
