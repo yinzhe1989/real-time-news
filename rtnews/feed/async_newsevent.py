@@ -71,10 +71,10 @@ async def get_latest_news(redis, channel, top=None, timeline=None, show_Body=Fal
             continue
         logger.debug(f'raw news from redis: {news}')
         try:
-            rt = datetime.fromtimestamp(int(news['timestamp']))
-            if rt < timeline:
-                logger.debug(f'news_time={rt}, timeline={timeline}, skip this news')
+            if timeline and int(news['timestamp']) < timeline:
+                logger.debug(f'news_time={int(news["timestamp"])}, timeline={timeline}, skip this news')
                 continue
+            rt = datetime.fromtimestamp(int(news['timestamp']))
             rtstr = datetime.strftime(rt, "%m-%d %H:%M")
             row = [lname, news['title'], news['summary'], rtstr, news['url']]
             if show_Body:
@@ -88,7 +88,7 @@ async def get_latest_news(redis, channel, top=None, timeline=None, show_Body=Fal
     return df
 
 async def feeds_txt(redis, lid):
-    timeline = datetime.now().timestamp() - fv.FEED_NEWS_TIMELINE
+    timeline = int(datetime.now().timestamp()) - fv.FEED_NEWS_TIMELINE
     df = await get_latest_news(redis, lid, top=fv.FEED_NEWS_TOP, timeline=timeline)
     txt_file = os.path.join(ct.DAT_DIR, f'{ct.GLOBAL_CHANNELS[lid]}.txt')
     logger.info(f'Writing text to file: {txt_file}')
@@ -105,7 +105,7 @@ async def feeds_txt(redis, lid):
 
 
 async def feeds_html(redis, lid):
-    timeline = datetime.now().timestamp() - fv.FEED_NEWS_TIMELINE
+    timeline = int(datetime.now().timestamp()) - fv.FEED_NEWS_TIMELINE
     df = await get_latest_news(redis, lid, top=fv.FEED_NEWS_TOP, timeline=timeline)
     html = E.HTML(
         E.HEAD(
