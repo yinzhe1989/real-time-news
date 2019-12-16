@@ -385,11 +385,8 @@ def _parse_news_item_body(text):
             continue
         if p_text_lstriped.startswith('来源：'):
             continue
-        #if p_text.startswith('\u3000\u3000原标题：'):
-        #    continue
-        #if p_text.startswith('\u3000\u3000新浪财经讯 '):
-        #    p_text = '\u3000\u3000' + p_text[len('\u3000\u3000新浪财经讯 '):]
-        p_text = re.sub('^\u3000\u3000新浪.{0,6}讯[ ,.。，]?', '\u3000\u3000', p_text)
+        # 新京报讯，东方财富网讯，新浪财经讯，新京报讯（记者 李一凡）
+        p_text = re.sub('^\u3000\u3000(新浪.{0,6}|.+[报网])讯[\u3000 ,.。，]?(（记者.+）)?', '\u3000\u3000', p_text)
         
         body = body + p_text + '\n'
     summary = ''
@@ -403,7 +400,12 @@ def _parse_news_item_body(text):
                 summary_arr.append([item.index, item.sentence])
         summary_arr = sorted(summary_arr, key=lambda x: x[0])
         summary_arr = map(lambda x: x[1] + '。', summary_arr)
-        summary = ''.join(summary_arr)
+        #summary = ''.join(summary_arr)
+        summary = ''
+        for sentence in summary_arr:
+            if len(summary) > ct.MAX_SUMMARY_TOTAL_WORDS_NUM:
+                break
+            summary += sentence
         logger.debug(f'news summary: {summary}')
 
     return body, summary
