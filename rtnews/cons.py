@@ -27,7 +27,7 @@ GLOBAL_CHANNELS = {'100': '全部', '101': '国内', '102': '国际',
                    '109': '股市', '110': '美股'}
 
 # 新闻摘要最大句子数
-MAX_SUMMARY_SENTENCES_NUM = 5
+MAX_SUMMARY_SENTENCES_NUM = 4
 
 # 新闻摘要句子最大字数
 MAX_SUMMARY_SENTENCE_WORDS_NUM = 100
